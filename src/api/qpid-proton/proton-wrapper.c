@@ -7,6 +7,7 @@
 #include "proton-wrapper.h"
 #include "proton-context.h"
 #include "vmsl.h"
+#include <unistd.h>
 
 static inline bool failed(pn_messenger_t *messenger)
 {
@@ -225,7 +226,15 @@ void proton_send(msg_ctxt_t *ctxt, msg_content_loader content_loader)
 
     proton_do_send(proton_ctxt->messenger, message);
 
-    proton_commit(proton_ctxt->messenger);
+    pn_tracker_t tracker = pn_messenger_outgoing_tracker(proton_ctxt->messenger);
+    pn_status_t status = pn_messenger_status(proton_ctxt->messenger, tracker);
+    while (status == PN_STATUS_PENDING || status == PN_STATUS_MODIFIED) {
+        status = pn_messenger_status(proton_ctxt->messenger, tracker);
+        usleep(10);
+       // sleep(1);
+        //printf("Status == %d\n", status);
+    }
+//    proton_commit(proton_ctxt->messenger);
     pn_message_free(message);
 }
 
